@@ -117,7 +117,7 @@ a{text-decoration:none;color:inherit}
   transition:background .3s;gap:16px;
 }
 .tb-left{display:flex;flex-direction:column;gap:3px}
-.tb-greeting{font-family:var(--fd);font-size:17px;font-weight:700;color:var(--t1)}
+.tb-greeting{font-family:var(--fd);font-size:17px;font-weight:700;color:var(--t1);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tb-sub{font-size:12px;color:var(--t3);font-weight:400}
 .tb-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .datetime-block{text-align:right}
@@ -631,6 +631,9 @@ a{text-decoration:none;color:inherit}
   .sb-header-m { display: flex !important; }
   .main-wrap { margin-left: 0; }
   #menu-toggle { display: block !important; }
+  
+  .tb-left, .datetime-block { display: none !important; } /* Hide greeting and clock as soon as sidebar collapses */
+  .topbar { justify-content: space-between; padding: 0 20px; }
 }
 
 @media (max-width: 992px) {
@@ -640,25 +643,19 @@ a{text-decoration:none;color:inherit}
 }
 
 @media (max-width: 768px) {
-  .topbar { padding: 0 16px; justify-content: space-between; }
   .content { padding: 20px 16px 80px; }
-  .tb-left, .datetime-block { display: none !important; } /* Hide greeting and clock on mobile */
-  
-  #online-status { font-size: 0 !important; } /* Hide 'Online' text, keep dot */
+  #online-status { font-size: 0 !important; } 
   #online-status::before { content: '●'; font-size: 14px; margin-right: 4px; }
-  
   .ph-title { font-size: 22px; }
   .goals-grid { grid-template-columns: 1fr; }
-  
-  .btn-new-text { display: none; } /* We will need to wrap the text in a span in HTML */
+  .btn-new-text { display: none !important; }
 }
 
-@media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  .stat-card { padding: 16px; }
+@media (max-width: 550px) {
+  .stats-grid { grid-template-columns: 1fr !important; } /* Hard force 1 column for phones */
+  .stat-card { padding: 18px; }
   .topbar { gap: 8px; }
-  
-  .auth-box { padding: 24px 20px; }
   .ph-title { font-size: 20px; }
+  .auth-box { padding: 24px 20px; }
 }
 
