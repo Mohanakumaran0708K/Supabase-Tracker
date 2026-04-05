@@ -633,6 +633,7 @@ a{text-decoration:none;color:inherit}
   #menu-toggle { display: block !important; }
   
   .tb-left, .datetime-block { display: none !important; } /* Hide greeting and clock as soon as sidebar collapses */
+  .mobile-logo-wrap { display: flex !important; }
   .topbar { justify-content: space-between; padding: 0 20px; }
 }
 
