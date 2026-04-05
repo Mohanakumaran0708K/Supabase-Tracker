@@ -708,7 +708,26 @@ const initEvents=()=>{
   // Auto re-check on focus
   window.addEventListener('focus',()=>{autoMiss();render()});
   // Mobile sidebar toggle
-  document.getElementById('menu-toggle')?.addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));
+  const sb = document.querySelector('.sidebar');
+  document.getElementById('menu-toggle')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sb.classList.toggle('active');
+  });
+  document.getElementById('sb-close')?.addEventListener('click', () => {
+    sb.classList.remove('active');
+  });
+  // Close sidebar on navigate (mobile)
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (window.innerWidth <= 1100) sb.classList.remove('active');
+    });
+  });
+  // Close sidebar when clicking outside
+  document.addEventListener('click', (e) => {
+    if (window.innerWidth <= 1100 && sb.classList.contains('active') && !sb.contains(e.target)) {
+      sb.classList.remove('active');
+    }
+  });
 };
 
 /* ═══ INIT ═══════════════════════════════════════════════════════ */

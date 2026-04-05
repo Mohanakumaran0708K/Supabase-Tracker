@@ -78,6 +78,9 @@
      SIDEBAR
 ══════════════════════════════════════════ -->
 <aside class="sidebar">
+  <div class="sb-header-m" style="display:none;padding:15px;justify-content:flex-end">
+    <button class="ic-btn" id="sb-close" style="font-size:20px">&times;</button>
+  </div>
   <div class="sb-brand">
     <div class="sb-logo">📊</div>
     <div class="sb-brand-text">Progress Tracker<span>Daily · Weekly · Yearly</span></div>
@@ -116,7 +119,7 @@
   <!-- TOPBAR -->
   <header class="topbar">
     <div style="display:flex;align-items:center;gap:14px">
-      <button class="ic-btn" id="menu-toggle" style="display:none;font-size:18px" title="Menu">☰</button>
+      <button class="ic-btn" id="menu-toggle" style="font-size:18px" title="Menu">☰</button>
       <div class="tb-left">
         <div class="tb-greeting" id="greeting">Good Morning, User!</div>
         <div class="tb-sub" id="greeting-sub">Stay consistent today 💪</div>
@@ -127,7 +130,7 @@
         <div class="time-display" id="time-disp">--:--</div>
         <div class="date-display" id="date-disp">Loading...</div>
       </div>
-      <button class="btn btn-primary" id="btn-new">＋ New Task</button>
+      <button class="btn btn-primary" id="btn-new">＋ <span class="btn-new-text">New Task</span></button>
       <!-- Logged-in user + logout -->
       <div style="display:flex;align-items:center;gap:12px;position:relative">
         <span id="online-status" style="font-size:11px;font-weight:600;white-space:nowrap">🟢 Online</span>
