@@ -1,0 +1,5 @@
+.vscode/
+.gemini/
+.idea/
+.DS_Store
+*.log

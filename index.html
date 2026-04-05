@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="description" content="Daily Progress Tracker — Stay consistent, track your productivity."/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+  <title>Progress Tracker</title>
+  <!-- Supabase JS client (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading-screen" class="loading-screen">
+  <div style="font-size:48px">📊</div>
+  <div class="loading-spinner"></div>
+  <div style="font-size:14px;color:var(--t3);font-weight:500">Loading your data…</div>
+</div>
+
+<!-- Auth Overlay -->
+<div id="auth-ov" class="auth-ov" style="display:none">
+  <div class="auth-box">
+    <div class="auth-logo">📊</div>
+    <div class="auth-title">Progress Tracker</div>
+    <div class="auth-sub">Track your daily tasks and long-term goals</div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">Log In</button>
+      <button class="auth-tab" data-tab="signup">Sign Up</button>
+    </div>
+
+    <!-- Feedback message -->
+    <div id="auth-msg" style="margin-bottom:10px;min-height:18px"></div>
+
+    <!-- Login form -->
+    <form id="login-form-el" class="auth-form">
+      <div>
+        <label class="auth-lbl" for="login-email">Email</label>
+        <input class="auth-inp" id="login-email" type="email" placeholder="you@example.com" required/>
+      </div>
+      <div>
+        <label class="auth-lbl" for="login-pw">Password</label>
+        <input class="auth-inp" id="login-pw" type="password" placeholder="Your password" required/>
+      </div>
+      <button class="auth-btn" id="login-btn" type="submit">🔑 Log In</button>
+    </form>
+
+    <!-- Signup form -->
+    <form id="signup-form-el" class="auth-form" style="display:none">
+      <div>
+        <label class="auth-lbl" for="signup-email">Email</label>
+        <input class="auth-inp" id="signup-email" type="email" placeholder="you@example.com" required/>
+      </div>
+      <div>
+        <label class="auth-lbl" for="signup-pw">Password</label>
+        <input class="auth-inp" id="signup-pw" type="password" placeholder="Min 6 characters" required/>
+      </div>
+      <div>
+        <label class="auth-lbl" for="signup-pw2">Confirm Password</label>
+        <input class="auth-inp" id="signup-pw2" type="password" placeholder="Repeat password" required/>
+      </div>
+      <button class="auth-btn" id="signup-btn" type="submit">🚀 Create Account</button>
+    </form>
+
+    <p style="font-size:11.5px;color:var(--t3);margin-top:18px">
+      🛡️ Your data is private and secured with Supabase RLS.
+    </p>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">📊</div>
+    <div class="sb-brand-text">Progress Tracker<span>Daily · Weekly · Yearly</span></div>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-label">Menu</div>
+    <div class="nav-item active" data-view="dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+    <div class="nav-item" data-view="daily"><span class="nav-icon">📋</span>Daily Tasks<span class="nav-badge" id="nb-tasks"></span></div>
+    <div class="nav-item" data-view="goals"><span class="nav-icon">🎯</span>Goals<span class="nav-badge" id="nb-goals"></span></div>
+    <div class="nav-item" data-view="progress"><span class="nav-icon">📊</span>Progress Overview</div>
+    <div class="sb-label">Account</div>
+    <div class="nav-item" data-view="settings"><span class="nav-icon">⚙️</span>Settings</div>
+  </nav>
+
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">U</div>
+      <div class="sb-user-info">
+        <div class="sb-name" id="sb-name">User</div>
+        <div class="sb-role">🔥 <span id="sb-streak">0</span> Day Streak</div>
+      </div>
+    </div>
+    <div class="dark-toggle" id="dark-toggle" role="button" aria-label="Toggle dark mode">
+      <span>🌙 Dark Mode</span>
+      <div class="tog"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<div class="main-wrap">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button class="ic-btn" id="menu-toggle" style="display:none;font-size:18px" title="Menu">☰</button>
+      <div class="tb-left">
+        <div class="tb-greeting" id="greeting">Good Morning, User!</div>
+        <div class="tb-sub" id="greeting-sub">Stay consistent today 💪</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="datetime-block">
+        <div class="time-display" id="time-disp">--:--</div>
+        <div class="date-display" id="date-disp">Loading...</div>
+      </div>
+      <button class="btn btn-primary" id="btn-new">＋ New Task</button>
+      <!-- Logged-in user + logout -->
+      <div style="display:flex;align-items:center;gap:12px;position:relative">
+        <span id="online-status" style="font-size:11px;font-weight:600;white-space:nowrap">🟢 Online</span>
+        <button class="user-avatar-btn" id="logout-btn" title="Profile Menu">
+          <span id="user-email-disp">U</span>
+        </button>
+
+        <!-- Profile Popup -->
+        <div class="profile-popup" id="profile-popup">
+          <div class="pp-header">
+            <span class="pp-email" id="pp-email">user@email.com</span>
+            <button class="pp-close" onclick="document.getElementById('profile-popup').classList.remove('active')">✕</button>
+          </div>
+          <div class="pp-body">
+            <div class="pp-avatar">
+              <span id="pp-initial">U</span>
+              <div class="pp-cam" title="Change Avatar">📷</div>
+            </div>
+            <div class="pp-name">Hi, <span id="pp-name-disp">User</span>!</div>
+            <button class="pp-manage-btn" onclick="navigate('settings'); document.getElementById('profile-popup').classList.remove('active')">Manage your Tracker Account</button>
+          </div>
+          <div class="pp-footer">
+            <button class="pp-action-btn" onclick="alert('Multiple accounts not supported yet.')"><span class="pp-icon">＋</span> Add account</button>
+            <button class="pp-action-btn" id="pp-signout-btn"><span class="pp-icon">🚪</span> Sign out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- ════════ DASHBOARD ════════ -->
+    <div class="view active" id="view-dashboard">
+      <div class="ph">
+        <div><div class="ph-title">Dashboard 👋</div>
+          <div class="ph-sub">Your productivity overview for today</div></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-ic g">✅</div><div><div class="stat-val" id="s-comp">0</div><div class="stat-lbl">Completed</div></div></div>
+        <div class="stat-card"><div class="stat-ic y">⏳</div><div><div class="stat-val" id="s-pend">0</div><div class="stat-lbl">Pending</div></div></div>
+        <div class="stat-card"><div class="stat-ic r">❌</div><div><div class="stat-val" id="s-miss">0</div><div class="stat-lbl">Missed</div></div></div>
+        <div class="stat-card"><div class="stat-ic p">🔥</div><div><div class="stat-val" id="s-streak">0</div><div class="stat-lbl">Day Streak</div></div></div>
+      </div>
+
+      <!-- Insights Banner -->
+      <div id="insights-banner" class="ins-banner"></div>
+
+      <!-- Two-column grid -->
+      <div class="dash-grid">
+        <div class="dash-left">
+
+          <!-- Today's Focus -->
+          <div class="section">
+            <div class="sec-head">
+              <div class="sec-title">📅 Today's Focus</div>
+              <button class="btn btn-ghost btn-sm" onclick="openModal()">+ Add Task</button>
+            </div>
+            <div class="sec-body"><div class="tasks-list" id="today-list"></div></div>
+          </div>
+
+          <!-- Recently Completed -->
+          <div class="section">
+            <div class="sec-head">
+              <div class="sec-title">✅ Recently Completed</div>
+              <button class="btn btn-ghost btn-sm" id="btn-view-completed">View all</button>
+            </div>
+            <div class="sec-body"><div class="tasks-list" id="comp-list"></div></div>
+          </div>
+
+          <!-- Missed -->
+          <div class="section">
+            <div class="sec-head">
+              <div class="sec-title">❌ Missed Tasks</div>
+              <button class="btn btn-ghost btn-sm" id="btn-view-missed">View all</button>
+            </div>
+            <div class="sec-body"><div class="tasks-list" id="miss-list"></div></div>
+          </div>
+        </div>
+
+        <div class="dash-right">
+          <!-- Streak -->
+          <div id="streak-block"></div>
+
+          <!-- Upcoming -->
+          <div class="section">
+            <div class="sec-head"><div class="sec-title">🔔 Upcoming</div></div>
+            <div class="sec-body" style="padding-top:12px">
+              <div class="upcoming-list" id="upcoming"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ DAILY TASKS ════════ -->
+    <div class="view" id="view-daily">
+      <div class="ph">
+        <div><div class="ph-title">Daily Tasks 📋</div>
+          <div class="ph-sub">Manage and filter all your daily tasks</div></div>
+        <button class="btn btn-primary" onclick="openModal()">＋ New Task</button>
+      </div>
+      <div class="filter-bar">
+        <div class="ftabs">
+          <button class="ftab active" data-f="all">All</button>
+          <button class="ftab" data-f="pending">⏳ Pending</button>
+          <button class="ftab" data-f="completed">✅ Done</button>
+          <button class="ftab" data-f="missed">❌ Missed</button>
+        </div>
+      </div>
+      <!-- Sort Control -->
+      <div class="sort-bar">
+        <span class="sort-lbl">Sort by:</span>
+        <select id="sort-select" class="sort-sel">
+          <option value="newest">🆕 Newest First</option>
+          <option value="oldest">🕰️ Oldest First</option>
+          <option value="deadline">📅 By Deadline</option>
+        </select>
+      </div>
+      <div class="tasks-list" id="daily-list"></div>
+    </div>
+
+    <!-- ════════ GOALS ════════ -->
+    <div class="view" id="view-goals">
+      <div class="ph">
+        <div><div class="ph-title">Goals & Progress 🎯</div>
+          <div class="ph-sub">Track weekly, monthly and yearly goals with live progress</div></div>
+        <button class="btn btn-primary" onclick="openModal()">＋ New Goal</button>
+      </div>
+      <div class="filter-bar">
+        <div class="ftabs">
+          <button class="ftab active" data-g="all">All Goals</button>
+          <button class="ftab" data-g="weekly">📆 Weekly</button>
+          <button class="ftab" data-g="monthly">🗓️ Monthly</button>
+          <button class="ftab" data-g="yearly">📅 Yearly</button>
+        </div>
+      </div>
+      <div class="goals-grid" id="goals-grid"></div>
+    </div>
+
+    <!-- ════════ PROGRESS OVERVIEW ════════ -->
+    <div class="view" id="view-progress">
+      <div class="ph">
+        <div><div class="ph-title">Progress Overview 📊</div>
+          <div class="ph-sub">Visualize your consistency and goal completion</div></div>
+      </div>
+
+      <!-- 3 circular rings -->
+      <div class="prog-overview-grid" id="po-rings"></div>
+
+      <!-- Activity + Heatmap -->
+      <div class="activity-grid">
+        <div class="act-card">
+          <div class="sec-title" style="margin-bottom:14px">📈 Performance Insights</div>
+          <div class="insight-list" id="insights"></div>
+        </div>
+        <div class="act-card">
+          <div class="sec-title" style="margin-bottom:14px">📅 7-Day Activity</div>
+          <div id="heatmap"></div>
+          <div style="font-size:11px;color:var(--t3);margin-top:10px;display:flex;gap:12px;flex-wrap:wrap">
+            <span>🟦 Has Tasks</span><span style="color:var(--success)">🟩 All Done</span><span style="color:var(--warning)">🟨 Some Missed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SETTINGS ════════ -->
+    <div class="view" id="view-settings">
+      <div class="ph" style="margin-bottom:24px">
+        <div><div class="ph-title">Settings ⚙️</div>
+          <div class="ph-sub">Manage your preferences and application data</div></div>
+      </div>
+      
+      <div class="set-layout">
+        <!-- Sidebar Navigation -->
+        <div class="set-sidebar">
+          <button class="set-nav-item active" data-setpan="profile"><span class="set-nav-ic">👤</span> Profile</button>
+          <button class="set-nav-item" data-setpan="appearance"><span class="set-nav-ic">🎨</span> Appearance</button>
+          <button class="set-nav-item" data-setpan="preferences"><span class="set-nav-ic">⚙️</span> Preferences</button>
+          <button class="set-nav-item" data-setpan="streak"><span class="set-nav-ic">🔥</span> Streak Settings</button>
+          <button class="set-nav-item" data-setpan="notifications"><span class="set-nav-ic">🔔</span> Notifications</button>
+          <button class="set-nav-item" data-setpan="data"><span class="set-nav-ic">🗄️</span> Data & Sync</button>
+          <button class="set-nav-item" data-setpan="security"><span class="set-nav-ic">🛡️</span> Security</button>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="set-main">
+
+          <!-- Panel: Profile -->
+          <div class="set-panel active" id="pan-profile">
+            <div class="set-group">
+              <div class="sg-head"><div class="sg-title">Your Profile</div><div class="sg-sub">Personalize your experience</div></div>
+              <div class="sg-body">
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Display Name</div>
+                    <div class="ui-lbl-sub">How you want to be addressed in the app</div>
+                  </div>
+                  <div>
+                    <input class="ui-inp" id="s-name" type="text" placeholder="Enter your name"/>
+                  </div>
+                </div>
+                <!-- Save button just for Profile info -->
+                <div class="ui-row" style="background:var(--bg);justify-content:flex-end;padding:12px 24px">
+                  <button class="btn btn-primary" id="save-settings">💾 Save Profile</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel: Appearance -->
+          <div class="set-panel" id="pan-appearance">
+            <div class="set-group">
+              <div class="sg-head"><div class="sg-title">Appearance</div><div class="sg-sub">Adjust how the app looks</div></div>
+              <div class="sg-body">
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Dark Mode</div>
+                    <div class="ui-lbl-sub">Switch to a comfortable dark theme</div>
+                  </div>
+                  <div class="ui-tog" id="tog-dark"></div>
+                </div>
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Compact View</div>
+                    <div class="ui-lbl-sub">Reduce spacing to fit more tasks on screen</div>
+                  </div>
+                  <div class="ui-tog" id="tog-compact"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel: Preferences -->
+          <div class="set-panel" id="pan-preferences">
+            <div class="set-group">
+              <div class="sg-head"><div class="sg-title">Task & Goal Preferences</div><div class="sg-sub">Customize tracker behavior</div></div>
+              <div class="sg-body">
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Auto-Miss Overdue Tasks</div>
+                    <div class="ui-lbl-sub">Automatically change task status if deadline passes</div>
+                  </div>
+                  <div class="ui-tog on" id="tog-automiss"></div>
+                </div>
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Default End of Day</div>
+                    <div class="ui-lbl-sub">When do your daily tasks expire?</div>
+                  </div>
+                  <select class="ui-sel" id="sel-eod">
+                    <option value="23:59">11:59 PM (Midnight)</option>
+                    <option value="02:00">2:00 AM (Next Day)</option>
+                    <option value="05:00">5:00 AM (Next Day)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel: Streak Settings -->
+          <div class="set-panel" id="pan-streak">
+            <div class="set-group">
+              <div class="sg-head"><div class="sg-title">Streak Target</div><div class="sg-sub">Set goals for consistency</div></div>
+              <div class="sg-body">
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Streak Goal (Days)</div>
+                    <div class="ui-lbl-sub">What's your current consistency target?</div>
+                  </div>
+                  <input class="ui-inp" id="inp-streak-goal" type="number" value="30" min="1" max="365" style="width:100px;min-width:0"/>
+                </div>
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Streak Freeze</div>
+                    <div class="ui-lbl-sub">Allow 1 missed day without losing your streak (Mock)</div>
+                  </div>
+                  <div class="ui-tog" id="tog-freeze"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel: Notifications -->
+          <div class="set-panel" id="pan-notifications">
+            <div class="set-group">
+              <div class="sg-head"><div class="sg-title">Notifications</div><div class="sg-sub">Manage alerts and reminders</div></div>
+              <div class="sg-body">
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Browser Notifications</div>
+                    <div class="ui-lbl-sub">Receive alerts even when the app is in the background</div>
+                  </div>
+                  <div class="ui-tog" id="tog-notifs"></div>
+                </div>
+                <div class="ui-row" style="opacity:0.5;pointer-events:none">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Daily Summary Time</div>
+                    <div class="ui-lbl-sub">When to notify you about your progress</div>
+                  </div>
+                  <input class="ui-inp" type="time" value="09:00" style="width:120px;min-width:0"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel: Data -->
+          <div class="set-panel" id="pan-data">
+            <div class="set-group">
+              <div class="sg-head"><div class="sg-title">Backup & Sync</div><div class="sg-sub">Manage your database</div></div>
+              <div class="sg-body">
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Export Data</div>
+                    <div class="ui-lbl-sub">Download all your tasks and goals as a JSON file</div>
+                  </div>
+                  <button class="btn btn-primary" id="btn-export">📥 Download Backup</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="set-group" style="border-color:rgba(239,68,68,.3)">
+              <div class="sg-head" style="background:var(--danger-dim);border-color:rgba(239,68,68,.3)">
+                <div class="sg-title" style="color:var(--danger)">Danger Zone</div>
+                <div class="sg-sub" style="color:var(--danger)">Permanent destructive actions</div>
+              </div>
+              <div class="sg-body">
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl" style="color:var(--t1)">Clear Local Data</div>
+                    <div class="ui-lbl-sub">Delete local storage. Does not delete cloud Supabase data.</div>
+                  </div>
+                  <button class="btn btn-danger" id="clear-data">🗑️ Clear Data</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel: Security -->
+          <div class="set-panel" id="pan-security">
+            <div class="set-group">
+              <div class="sg-head"><div class="sg-title">Authentication</div><div class="sg-sub">Manage your active session</div></div>
+              <div class="sg-body">
+                <div class="ui-row">
+                  <div class="ui-info">
+                    <div class="ui-lbl">Logged in as</div>
+                    <div class="ui-lbl-sub" id="sec-email">Not authenticated</div>
+                  </div>
+                  <button class="btn btn-danger" id="sec-logout-btn">🚪 Sign Out</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- end main-wrap -->
+</div><!-- end app -->
+
+<!-- ══════════════════════════════════════════
+     MOBILE BOTTOM NAV
+══════════════════════════════════════════ -->
+<nav class="mobile-nav">
+  <div class="mn-items">
+    <button class="mn-item active" data-view="dashboard"><span class="mn-icon">🏠</span>Home</button>
+    <button class="mn-item" data-view="daily"><span class="mn-icon">📋</span>Tasks</button>
+    <button class="mn-item" data-view="goals"><span class="mn-icon">🎯</span>Goals</button>
+    <button class="mn-item" data-view="progress"><span class="mn-icon">📊</span>Progress</button>
+    <button class="mn-item" data-view="settings"><span class="mn-icon">⚙️</span>Settings</button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     TASK MODAL
+══════════════════════════════════════════ -->
+<div id="task-modal" class="modal-ov hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h2 class="modal-title" id="modal-title-text">New Task / Goal</h2>
+      <button class="modal-close-btn" id="modal-close-btn" aria-label="Close">✕</button>
+    </div>
+    <form id="task-form" novalidate>
+      <div class="fg">
+        <label class="fl" for="f-title">Title <span class="req">*</span></label>
+        <input class="fi" id="f-title" type="text" placeholder="e.g. Learn HTML Tags" autocomplete="off" required/>
+      </div>
+      <div class="fg">
+        <label class="fl" for="f-desc">Description <span style="color:var(--t3);font-weight:400">(optional)</span></label>
+        <textarea class="fta" id="f-desc" placeholder="What do you want to achieve?"></textarea>
+      </div>
+      <div class="frow">
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl" for="f-level">Level <span class="req">*</span></label>
+          <select class="fsel" id="f-level">
+            <option value="daily">📅 Daily Task</option>
+            <option value="weekly">📆 Weekly Goal</option>
+            <option value="monthly">🗓️ Monthly Goal</option>
+            <option value="yearly">📅 Yearly Goal</option>
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl" for="f-parent">Parent Goal <span style="color:var(--t3);font-weight:400">(optional)</span></label>
+          <select class="fsel" id="f-parent"><option value="">None (standalone)</option></select>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+      <div class="frow">
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl" for="f-start">Start Date</label>
+          <input class="fi" id="f-start" type="datetime-local"/>
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl" for="f-deadline">Deadline <span class="req">*</span></label>
+          <input class="fi" id="f-deadline" type="datetime-local" required/>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+      <div class="fact">
+        <button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">💾 Save Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-wrap" id="toast-wrap" aria-live="polite"></div>
+
+<script src="app.js"></script>
+<script src="auth.js"></script>
+<script>
+  // Show mobile menu toggle on small screens
+  const mt=document.getElementById('menu-toggle');
+  if(window.innerWidth<=768&&mt)mt.style.display='flex';
+  window.addEventListener('resize',()=>{if(mt)mt.style.display=window.innerWidth<=768?'flex':'none'});
+
+  // Fix View-all buttons
+  document.getElementById('btn-view-completed')?.addEventListener('click',()=>{
+    filterTab='completed';navigate('daily');
+  });
+  document.getElementById('btn-view-missed')?.addEventListener('click',()=>{
+    filterTab='missed';navigate('daily');
+  });
+
+  // Dark pref toggle in settings (bind via JS, not inline)
+  document.getElementById('dark-pref-tog')?.addEventListener('click',function(){
+    toggleTheme();
+    this.classList.toggle('on',document.documentElement.getAttribute('data-theme')==='dark');
+  });
+  // Sync dark-pref-tog on settings render (exposed globally)
+  window._syncDarkTog=()=>{
+    const tog=document.getElementById('dark-pref-tog');
+    if(tog)tog.classList.toggle('on',document.documentElement.getAttribute('data-theme')==='dark');
+  };
+</script>
+</body>
+</html>
